@@ -1,0 +1,2 @@
+export const commonChars = "的一是在不了有和人这中大为上个国我以要他时来用们生到作地于出就分对成会可主发年动同工也能下过子说产种面而方后多定行学法所民得经十三之进着等部度家电力里如水化高自二理起小物现实加量都两体制机当使点从业本去把性好应开它合还因由其些然前外天政四日那社义事平形相全表间样与关各重新线内数正心反你明看原又么利比或但交建月平果气最新常光长次老手己理从当重门但水日道起理作实化电点子这好二因法所心正表理水理然外现关当起小经前政理当还其平理些明但子日由化最月前水也平气心表心平好水由最起平理还由二因点心二最"; // Add more common chars here, or we can just rely on the iteration but prioritize by some simple logic.
+// A better way is to just use a larger string of 3500 common characters.
