@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Input, Button, Table, Space, message, Typography, Tag, Upload } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Card, Input, Button, Table, Space, message, Typography, Tag, Upload, Collapse, Popconfirm } from 'antd';
+import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { pinyin } from 'pinyin-pro';
 
 const { TextArea } = Input;
@@ -30,11 +30,15 @@ const ConfigTab: React.FC<ConfigTabProps> = ({ globalConfig, setGlobalConfig }) 
         const initialConfigs: CharConfig[] = [];
         Object.entries(globalConfig).forEach(([char, conf]) => {
             const ignoreAll = conf.__ignoreAll === true;
-            const pinyins: any[] = [];
-            Object.entries(conf).forEach(([py, val]: [string, any]) => {
-                if (py !== '__ignoreAll') {
-                    pinyins.push({ pinyin: py, replacement: val.replacement || '', ignore: val.ignore === true });
-                }
+            // 始终基于字典补全所有读音，避免「忽略全部」场景下读音列表为空
+            const allPinyins = pinyin(char, { multiple: true, type: 'array' }) as string[];
+            const pinyins = allPinyins.map((py: string) => {
+                const saved = conf[py] || {};
+                return {
+                    pinyin: py,
+                    replacement: saved.replacement || '',
+                    ignore: saved.ignore === true,
+                };
             });
             initialConfigs.push({ char, ignoreAll, pinyins });
         });
@@ -144,88 +148,6 @@ const ConfigTab: React.FC<ConfigTabProps> = ({ globalConfig, setGlobalConfig }) 
         setCharConfigs(charConfigs.filter(c => c.char !== char));
     };
 
-    const columns = [
-        {
-            title: '多音字',
-            dataIndex: 'char',
-            key: 'char',
-            width: 150,
-            render: (text: string, record: CharConfig) => (
-                <Space direction="vertical">
-                    <Text strong style={{ fontSize: 18, color: '#f5222d' }}>{text}</Text>
-                    <label>
-                        <input 
-                            type="checkbox" 
-                            checked={record.ignoreAll}
-                            onChange={(e) => handleIgnoreAllChange(record.char, e.target.checked)}
-                        /> 忽略该字所有读音
-                    </label>
-                </Space>
-            )
-        },
-        {
-            title: '读音及配置',
-            key: 'pinyins',
-            render: (_: any, record: CharConfig) => (
-                <Table
-                    dataSource={record.pinyins}
-                    pagination={false}
-                    showHeader={false}
-                    rowKey="pinyin"
-                    size="small"
-                    columns={[
-                        {
-                            title: '读音',
-                            dataIndex: 'pinyin',
-                            key: 'pinyin',
-                            width: 100,
-                            render: (text: string) => <Tag color="blue">{text}</Tag>
-                        },
-                        {
-                            title: '优先替换字',
-                            key: 'replacement',
-                            render: (_: any, p: any) => (
-                                <Input 
-                                    placeholder="输入替换字，留空则不替换" 
-                                    value={p.replacement}
-                                    onChange={e => handleReplacementChange(record.char, p.pinyin, e.target.value)}
-                                    style={{ width: 180 }}
-                                    disabled={p.ignore || record.ignoreAll}
-                                />
-                            )
-                        },
-                        {
-                            title: '配置操作',
-                            key: 'config',
-                            render: (_: any, p: any) => (
-                                <Space>
-                                    <label>
-                                        <input 
-                                            type="checkbox" 
-                                            checked={p.ignore}
-                                            disabled={record.ignoreAll}
-                                            onChange={(e) => handleIgnoreChange(record.char, p.pinyin, e.target.checked)}
-                                        /> 忽略该读音
-                                    </label>
-                                </Space>
-                            )
-                        }
-                    ]}
-                />
-            )
-        },
-        {
-            title: '操作',
-            key: 'action',
-            width: 100,
-            render: (_: any, record: CharConfig) => (
-                <Button type="link" danger onClick={() => handleDelete(record.char)}>
-                    删除该字配置
-                </Button>
-            )
-        }
-    ];
-
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <Card title="1. 导入多音字">
@@ -241,19 +163,118 @@ const ConfigTab: React.FC<ConfigTabProps> = ({ globalConfig, setGlobalConfig }) 
                     onChange={e => setInputText(e.target.value)} 
                     placeholder="例如：行 长 大..."
                 />
-                <Button type="primary" onClick={handleParse} style={{ marginTop: 16 }}>
+                <Button type="primary" onClick={handleParse} style={{ marginTop: 16 }} size="large">
                     解析读音
                 </Button>
             </Card>
 
             <Card title="2. 配置替换字库 (最高优先级)">
-                <Table 
-                    dataSource={charConfigs} 
-                    columns={columns} 
-                    rowKey="char"
-                    pagination={false}
-                    size="small"
-                />
+                {charConfigs.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '32px 0', color: '#bfbfbf' }}>
+                        暂无配置，请在上方录入需要配置的汉字
+                    </div>
+                ) : (
+                    <Collapse
+                        size="small"
+                        items={charConfigs.map(record => {
+                            const configuredCount = record.pinyins.filter(p => p.replacement || p.ignore).length;
+                            return {
+                                key: record.char,
+                                label: (
+                                    <Space size="middle" style={{ width: '100%' }}>
+                                        <Text strong style={{ fontSize: 18, color: '#3b82f6' }}>{record.char}</Text>
+                                        {record.ignoreAll ? (
+                                            <Tag color="default">全部忽略</Tag>
+                                        ) : configuredCount > 0 ? (
+                                            <Tag color="blue">已配置 {configuredCount} / {record.pinyins.length} 个读音</Tag>
+                                        ) : (
+                                            <Tag>未配置</Tag>
+                                        )}
+                                        <Text type="secondary" style={{ fontSize: 12 }}>
+                                            读音：{record.pinyins.map(p => p.pinyin).join(' / ')}
+                                        </Text>
+                                    </Space>
+                                ),
+                                extra: (
+                                    <Popconfirm
+                                        title={`确定删除「${record.char}」的配置？`}
+                                        onConfirm={(e) => { e?.stopPropagation(); handleDelete(record.char); }}
+                                        onCancel={(e) => e?.stopPropagation()}
+                                        okText="删除"
+                                        cancelText="取消"
+                                    >
+                                        <Button
+                                            type="link"
+                                            danger
+                                            size="small"
+                                            icon={<DeleteOutlined />}
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            删除
+                                        </Button>
+                                    </Popconfirm>
+                                ),
+                                children: (
+                                    <>
+                                        <div style={{ marginBottom: 12 }}>
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={record.ignoreAll}
+                                                    onChange={(e) => handleIgnoreAllChange(record.char, e.target.checked)}
+                                                />
+                                                {' '}忽略该字所有读音
+                                            </label>
+                                        </div>
+                                        <Table
+                                            dataSource={record.pinyins}
+                                            pagination={false}
+                                            rowKey="pinyin"
+                                            size="small"
+                                            columns={[
+                                                {
+                                                    title: '读音',
+                                                    dataIndex: 'pinyin',
+                                                    key: 'pinyin',
+                                                    width: 100,
+                                                    render: (text: string) => <Tag color="blue">{text}</Tag>,
+                                                },
+                                                {
+                                                    title: '优先替换字',
+                                                    key: 'replacement',
+                                                    render: (_: any, p: any) => (
+                                                        <Input
+                                                            placeholder="输入替换字，留空则不替换"
+                                                            value={p.replacement}
+                                                            onChange={e => handleReplacementChange(record.char, p.pinyin, e.target.value)}
+                                                            style={{ width: 200 }}
+                                                            disabled={p.ignore || record.ignoreAll}
+                                                        />
+                                                    ),
+                                                },
+                                                {
+                                                    title: '忽略该读音',
+                                                    key: 'ignore',
+                                                    width: 120,
+                                                    render: (_: any, p: any) => (
+                                                        <label>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={p.ignore}
+                                                                disabled={record.ignoreAll}
+                                                                onChange={(e) => handleIgnoreChange(record.char, p.pinyin, e.target.checked)}
+                                                            /> 忽略
+                                                        </label>
+                                                    ),
+                                                },
+                                            ]}
+                                        />
+                                    </>
+                                ),
+                            };
+                        })}
+                    />
+                )}
                 <Button type="primary" onClick={handleSave} style={{ marginTop: 16 }} size="large">
                     保存全局配置
                 </Button>

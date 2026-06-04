@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Input, Button, Table, Typography, Space, Tag, message, Card, Radio, Upload } from 'antd';
+import { Input, Button, Table, Typography, Space, Tag, message, Radio, Upload, Row, Col, Collapse } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
@@ -29,7 +29,14 @@ interface SingleRunTabProps {
 }
 
 const SingleRunTab: React.FC<SingleRunTabProps> = ({ globalConfig }) => {
-    const [text, setText] = useState('');
+    const [text, setText] = useState(`天青色等烟雨 而我在等你
+炊烟袅袅升起 隔江千万里
+在瓶底书汉隶仿前朝的飘逸
+就当我为遇见你伏笔
+天青色等烟雨 而我在等你
+月色被打捞起 晕开了结局
+如传世的青花瓷自顾自美丽
+你眼带笑意`);
     const [detectMode, setDetectMode] = useState<'all' | 'specified'>('all');
     const [specifiedChars, setSpecifiedChars] = useState('');
     const [loading, setLoading] = useState(false);
@@ -209,105 +216,267 @@ const SingleRunTab: React.FC<SingleRunTabProps> = ({ globalConfig }) => {
     ];
 
     return (
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
-            <Card title="1. 检测配置">
-                <Radio.Group 
-                    value={detectMode} 
-                    onChange={e => setDetectMode(e.target.value)}
-                    style={{ marginBottom: 16 }}
-                >
-                    <Radio value="all">检测全部多音字</Radio>
-                    <Radio value="specified">仅检测指定多音字</Radio>
-                </Radio.Group>
-                
-                {detectMode === 'specified' && (
-                    <div style={{ marginTop: 8 }}>
-                        <div style={{ marginBottom: 8 }}>
-                            <Text>输入或上传指定需要检测的汉字：</Text>
-                            <Upload 
-                                beforeUpload={handleUploadSpecifiedChars} 
-                                showUploadList={false} 
-                                accept=".txt"
-                                style={{ marginLeft: 16 }}
+        <Collapse
+            defaultActiveKey={['1', '2']}
+            size="large"
+            style={{ background: 'transparent' }}
+            items={[
+                {
+                    key: '1',
+                    label: (
+                        <Space>
+                            <Text strong>1. 检测配置</Text>
+                            <Tag color="blue">
+                                {detectMode === 'all'
+                                    ? '检测全部多音字'
+                                    : `仅检测指定字（${specifiedChars.replace(/\s/g, '').length}个）`}
+                            </Tag>
+                        </Space>
+                    ),
+                    children: (
+                        <>
+                            <Radio.Group
+                                value={detectMode}
+                                onChange={e => setDetectMode(e.target.value)}
+                                style={{ marginBottom: 16 }}
                             >
-                                <Button icon={<UploadOutlined />} size="small">上传TXT提取汉字</Button>
-                            </Upload>
-                        </div>
-                        <TextArea 
-                            rows={2} 
-                            value={specifiedChars} 
-                            onChange={e => setSpecifiedChars(e.target.value)} 
-                            placeholder="例如：行 长 和..."
-                        />
-                    </div>
-                )}
-            </Card>
+                                <Radio value="all">检测全部多音字</Radio>
+                                <Radio value="specified">仅检测指定多音字</Radio>
+                            </Radio.Group>
 
-            <Card title="2. 输入歌词">
-                <TextArea 
-                    rows={6} 
-                    value={text} 
-                    onChange={e => setText(e.target.value)} 
-                    placeholder="请输入中文歌词..."
-                />
-                <Button type="primary" onClick={handleProcess} loading={loading} style={{ marginTop: 16 }}>
-                    检测多音字
-                </Button>
-            </Card>
-
-            {result && (
-                <Card title="3. 检测结果与高亮">
-                    <div style={{ lineHeight: '2', fontSize: '16px', padding: '16px', background: '#f5f5f5', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
-                        {result.tokens.map((t, i) => (
-                            <span 
-                                key={i} 
-                                style={t.isPolyphone ? { color: '#f5222d', fontWeight: 'bold', background: '#ffe5e5', padding: '0 2px', borderRadius: '2px' } : {}}
-                                title={t.isPolyphone ? `拼音: ${t.pinyin}\n推荐替换: ${t.recommendedReplacement}` : undefined}
-                            >
-                                {t.char}
-                            </span>
-                        ))}
-                    </div>
-                </Card>
-            )}
-
-            {result && (
-                <Card title="4. 多音字统计与替换配置">
-                    <Table 
-                        dataSource={result.stats} 
-                        columns={columns} 
-                        rowKey={(r) => `${r.char}_${r.pinyin}`}
-                        pagination={false}
-                    />
-                    <Space style={{ marginTop: 16 }}>
-                        <Button type="primary" onClick={applyReplacement}>
-                            自动应用替换
-                        </Button>
-                    </Space>
-                </Card>
-            )}
-
-            {replacedText && (
-                <Card title="5. 替换结果">
-                    <TextArea 
-                        rows={6} 
-                        value={replacedText} 
-                        onChange={e => setReplacedText(e.target.value)}
-                    />
-                    <Space style={{ marginTop: 16 }}>
-                        <Button onClick={copyToClipboard}>复制结果</Button>
-                        <Button onClick={() => {
-                            const blob = new Blob([replacedText], { type: 'text/plain;charset=utf-8' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = '处理结果.txt';
-                            a.click();
-                        }}>导出TXT</Button>
-                    </Space>
-                </Card>
-            )}
-        </Space>
+                            {detectMode === 'specified' && (
+                                <div style={{ marginTop: 8 }}>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <Text>输入或上传指定需要检测的汉字：</Text>
+                                        <Upload
+                                            beforeUpload={handleUploadSpecifiedChars}
+                                            showUploadList={false}
+                                            accept=".txt"
+                                            style={{ marginLeft: 16 }}
+                                        >
+                                            <Button icon={<UploadOutlined />} size="small">上传TXT提取汉字</Button>
+                                        </Upload>
+                                    </div>
+                                    <TextArea
+                                        rows={2}
+                                        value={specifiedChars}
+                                        onChange={e => setSpecifiedChars(e.target.value)}
+                                        placeholder="例如：行 长 和..."
+                                    />
+                                </div>
+                            )}
+                        </>
+                    ),
+                },
+                {
+                    key: '2',
+                    label: (
+                        <Space>
+                            <Text strong>2. 输入歌词</Text>
+                            <Tag color="geekblue">{text.replace(/\s/g, '').length} 字</Tag>
+                            {text && (
+                                <Text type="secondary" ellipsis style={{ maxWidth: 360 }}>
+                                    {text.slice(0, 30)}{text.length > 30 ? '…' : ''}
+                                </Text>
+                            )}
+                        </Space>
+                    ),
+                    children: (
+                        <>
+                            <TextArea
+                                rows={6}
+                                value={text}
+                                onChange={e => setText(e.target.value)}
+                                placeholder="请输入中文歌词..."
+                            />
+                            <Button type="primary" onClick={handleProcess} loading={loading} style={{ marginTop: 16 }}>
+                                检测多音字
+                            </Button>
+                        </>
+                    ),
+                },
+                ...(result
+                    ? [
+                          {
+                              key: '3',
+                              label: (
+                                  <Space>
+                                      <Text strong>3. 检测结果与高亮</Text>
+                                      <Tag color="red">
+                                          检出 {result.tokens.filter(t => t.isPolyphone).length} 个多音字
+                                      </Tag>
+                                  </Space>
+                              ),
+                              children: (
+                                  <div style={{ lineHeight: '2', fontSize: '16px', padding: '16px', background: '#f5f5f5', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>
+                                      {result.tokens.map((t, i) => (
+                                          <span
+                                              key={i}
+                                              style={t.isPolyphone ? { color: '#f5222d', fontWeight: 'bold', background: '#ffe5e5', padding: '0 2px', borderRadius: '2px' } : {}}
+                                              title={t.isPolyphone ? `拼音: ${t.pinyin}\n推荐替换: ${t.recommendedReplacement}` : undefined}
+                                          >
+                                              {t.char}
+                                          </span>
+                                      ))}
+                                  </div>
+                              ),
+                          },
+                          {
+                              key: '4',
+                              label: (
+                                  <Space>
+                                      <Text strong>4. 多音字统计与替换配置</Text>
+                                      <Tag color="purple">{result.stats.length} 种字</Tag>
+                                  </Space>
+                              ),
+                              extra: (
+                                  <Button
+                                      type="primary"
+                                      size="small"
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          applyReplacement();
+                                      }}
+                                  >
+                                      自动应用替换
+                                  </Button>
+                              ),
+                              children: (
+                                  <Table
+                                      dataSource={result.stats}
+                                      columns={columns}
+                                      rowKey={(r) => `${r.char}_${r.pinyin}`}
+                                      pagination={false}
+                                  />
+                              ),
+                          },
+                      ]
+                    : []),
+                ...(replacedText
+                    ? [
+                          {
+                              key: '5',
+                              label: (
+                                  <Space>
+                                      <Text strong>5. 替换结果（左右对照）</Text>
+                                      <Tag color="success">
+                                          已替换 {(() => {
+                                              if (!result) return 0;
+                                              const o = result.text.split('');
+                                              const r = replacedText.split('');
+                                              let c = 0;
+                                              for (let i = 0; i < r.length; i++) if (o[i] !== r[i]) c++;
+                                              return c;
+                                          })()} 字
+                                      </Tag>
+                                  </Space>
+                              ),
+                              children: (
+                                  <>
+                                      <Row gutter={16}>
+                                          <Col xs={24} md={12}>
+                                              <div style={{ marginBottom: 8, color: '#8b8b8b', fontSize: 13 }}>原始歌词</div>
+                                              <div
+                                                  style={{
+                                                      background: '#fafafa',
+                                                      border: '1px solid #f0f0f0',
+                                                      borderRadius: 8,
+                                                      padding: 16,
+                                                      minHeight: 180,
+                                                      lineHeight: '2',
+                                                      fontSize: 15,
+                                                      whiteSpace: 'pre-wrap',
+                                                  }}
+                                              >
+                                                  {result?.tokens.map((t, i) => (
+                                                      <span
+                                                          key={i}
+                                                          style={
+                                                              t.isPolyphone
+                                                                  ? {
+                                                                        color: '#f5222d',
+                                                                        fontWeight: 'bold',
+                                                                        background: '#ffe5e5',
+                                                                        padding: '0 2px',
+                                                                        borderRadius: '2px',
+                                                                    }
+                                                                  : {}
+                                                          }
+                                                      >
+                                                          {t.char}
+                                                      </span>
+                                                  ))}
+                                              </div>
+                                          </Col>
+                                          <Col xs={24} md={12}>
+                                              <div style={{ marginBottom: 8, color: '#8b8b8b', fontSize: 13 }}>替换后歌词</div>
+                                              <div
+                                                  style={{
+                                                      background: '#f0f9ff',
+                                                      border: '1px solid #bae6fd',
+                                                      borderRadius: 8,
+                                                      padding: 16,
+                                                      minHeight: 180,
+                                                      lineHeight: '2',
+                                                      fontSize: 15,
+                                                      whiteSpace: 'pre-wrap',
+                                                  }}
+                                              >
+                                                  {(() => {
+                                                      if (!result) return null;
+                                                      const originalChars = result.text.split('');
+                                                      const replacedChars = replacedText.split('');
+                                                      return replacedChars.map((c, i) => {
+                                                          const changed = originalChars[i] !== c;
+                                                          return (
+                                                              <span
+                                                                  key={i}
+                                                                  style={
+                                                                      changed
+                                                                          ? {
+                                                                                color: '#0369a1',
+                                                                                fontWeight: 'bold',
+                                                                                background: '#e0f2fe',
+                                                                                padding: '0 2px',
+                                                                                borderRadius: '2px',
+                                                                            }
+                                                                          : {}
+                                                                  }
+                                                              >
+                                                                  {c}
+                                                              </span>
+                                                          );
+                                                      });
+                                                  })()}
+                                              </div>
+                                          </Col>
+                                      </Row>
+                                      <div style={{ marginTop: 16 }}>
+                                          <div style={{ marginBottom: 8, color: '#8b8b8b', fontSize: 13 }}>可编辑的替换结果</div>
+                                          <TextArea
+                                              rows={6}
+                                              value={replacedText}
+                                              onChange={e => setReplacedText(e.target.value)}
+                                          />
+                                      </div>
+                                      <Space style={{ marginTop: 16 }}>
+                                          <Button onClick={copyToClipboard}>复制结果</Button>
+                                          <Button onClick={() => {
+                                              const blob = new Blob([replacedText], { type: 'text/plain;charset=utf-8' });
+                                              const url = URL.createObjectURL(blob);
+                                              const a = document.createElement('a');
+                                              a.href = url;
+                                              a.download = '处理结果.txt';
+                                              a.click();
+                                          }}>导出TXT</Button>
+                                      </Space>
+                                  </>
+                              ),
+                          },
+                      ]
+                    : []),
+            ]}
+        />
     );
 };
 
